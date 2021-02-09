@@ -53,8 +53,9 @@ const (
 
 // Configuration contains all the settings required by an Ingress controller
 type Configuration struct {
-	APIServerHost string
-	RootCAFile    string
+	APIServerHost  string
+	APIServerHosts string
+	RootCAFile     string
 
 	KubeConfigFile string
 
@@ -1642,4 +1643,11 @@ func ingressForHostPath(hostname, path string, servers []*ingress.Server) []*net
 	}
 
 	return ingresses
+}
+
+func GetHosts(hosts string) []string {
+	if len(hosts) == 0 {
+		return nil
+	}
+	return strings.Fields(strings.ReplaceAll(hosts, ",", " "))
 }

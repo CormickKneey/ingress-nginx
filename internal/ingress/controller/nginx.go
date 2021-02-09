@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	clientset "k8s.io/client-go/kubernetes"
 	"net"
 	"net/http"
 	"os"
@@ -417,6 +418,34 @@ func (n *NGINXController) start(cmd *exec.Cmd) {
 	go func() {
 		n.ngxErrCh <- cmd.Wait()
 	}()
+}
+
+func (n *NGINXController) SwitchApiServer(client clientset.Interface, config *Configuration, mc metric.Collector, fs file.Filesystem) {
+	klog.Info("Switching api server ...")
+	config.Client = client
+
+	n.store = store.New(
+		config.Namespace,
+		config.ConfigMapName,
+		config.TCPConfigMapName,
+		config.UDPConfigMapName,
+		config.DefaultSSLCertificate,
+		config.ResyncPeriod,
+		config.Client,
+		n.updateCh,
+		config.DisableCatchAll)
+	if config.UpdateStatus {
+		n.syncStatus = status.NewStatusSyncer(status.Config{
+			Client:                 config.Client,
+			PublishService:         config.PublishService,
+			PublishStatusAddress:   config.PublishStatusAddress,
+			IngressLister:          n.store,
+			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
+			UseNodeInternalIP:      config.UseNodeInternalIP,
+		})
+	}
+
+	klog.Info("Api server switched !")
 }
 
 // DefaultEndpoint returns the default endpoint to be use as default server that returns 404.
